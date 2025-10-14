@@ -3,7 +3,7 @@
 
 A Scalable Vulnerability Detection System with Multi-View Graph Representations
 
- <img src="fig/overview.png" width = "800" height = "300" alt="图片名称" align=center />
+ <img src="fig/overview.png" width = "400" alt="图片名称" align=center />
  
 
 ## Overview
@@ -39,7 +39,7 @@ Given generated multi-view images, we first train a parameter-shared CNN model a
 
 VulCNN Plus is an extension of VulCNN (VulCNN: An Image-Inspired Scalable Vulnerability Detection System) from ICSE 2022. 
 It further enhances the model's vulnerability detection capability by expanding the graph from a single graph to multiple graphs and enriching social network analysis approaches.
-You only need to replace some files in the [original repository](https://github.com/CGCL-codes/VulCNN) with the files in this repository to train VulCNN Plus.
+The training steps are similar to [original repository](https://github.com/CGCL-codes/VulCNN).
 
 ### Step 1: Code normalization
 Normalize the code with normalization.py (This operation will overwrite the data file, please make a backup)
