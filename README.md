@@ -3,7 +3,7 @@
 
 A Scalable Vulnerability Detection System with Multi-View Graph Representations
 
- <img src="fig/overview.png" width = "400" alt="图片名称" align=center />
+ <img src="fig/overview.png" width = "800" alt="图片名称" align=center />
  
 
 ## Overview
