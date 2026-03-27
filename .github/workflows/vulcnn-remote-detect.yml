@@ -1,0 +1,85 @@
+name: VulCNN Remote Detect
+
+on:
+  pull_request:
+    paths:
+      - "**/*.c"
+      - "CI_CD/**"
+  workflow_dispatch:
+
+jobs:
+  remote-detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install client dependencies
+        run: |
+          pip install -U pip
+          pip install requests
+
+      - name: Collect changed C files
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -E '\.c$' > changed_c_files.txt || true
+          else
+            git ls-files '*.c' > changed_c_files.txt || true
+          fi
+
+          echo "Changed C files:"
+          cat changed_c_files.txt || true
+          count=$(wc -l < changed_c_files.txt | tr -d ' ')
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when no C changes
+        if: steps.changed.outputs.count == '0'
+        run: |
+          mkdir -p CI_CD/output/cicd
+          echo "# VulCNN CI 检测报告" > CI_CD/output/cicd/report.md
+          echo "" >> CI_CD/output/cicd/report.md
+          echo "本次无 .c 文件变更，跳过检测。" >> CI_CD/output/cicd/report.md
+          cat CI_CD/output/cicd/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Send changed files to remote Flask detector
+        if: steps.changed.outputs.count != '0'
+        env:
+          VULCNN_SERVER_URL: ${{ secrets.VULCNN_SERVER_URL }}
+          VULCNN_SERVER_TOKEN: ${{ secrets.VULCNN_SERVER_TOKEN }}
+        run: |
+          python CI_CD/github_actions/send_changed_files_for_scan.py \
+            --server-url "$VULCNN_SERVER_URL" \
+            --token "$VULCNN_SERVER_TOKEN" \
+            --paths-file changed_c_files.txt \
+            --repo "${{ github.repository }}" \
+            --pr-number "${{ github.event.pull_request.number || 'manual' }}" \
+            --sha "${{ github.sha }}" \
+            --output-report CI_CD/output/cicd/report.md
+
+      - name: Show report in job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f CI_CD/output/cicd/report.md ]; then
+            cat CI_CD/output/cicd/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulcnn-remote-report
+          path: CI_CD/output/cicd/**
